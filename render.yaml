@@ -1,0 +1,16 @@
+# One-click deploy config for Render (https://render.com).
+# Sign in with GitHub, choose "New > Blueprint", point it at this repo.
+services:
+  - type: web
+    name: health-assistant
+    runtime: node
+    plan: free
+    buildCommand: npm ci
+    startCommand: node server.js
+    healthCheckPath: /api/status
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Optional: set this in the Render dashboard to enable AI mode.
+      - key: ANTHROPIC_API_KEY
+        sync: false

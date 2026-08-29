@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Health Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Nastaliq+Urdu:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo" aria-hidden="true">✚</span>
+    <div>
+      <h1 data-i18n="appTitle">Health Assistant</h1>
+      <p class="tagline" data-i18n="tagline">Describe your problem by voice or text</p>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label class="ai-toggle hidden" id="aiToggleWrap">
+      <input type="checkbox" id="aiToggle">
+      <span data-i18n="aiMode">AI mode</span>
+    </label>
+    <label class="speed-control">
+      <span data-i18n="voiceSpeed">Voice speed</span>
+      <select id="speedSelect">
+        <option value="1">1×</option>
+        <option value="1.2">1.2×</option>
+        <option value="1.4" selected>1.4×</option>
+        <option value="1.6">1.6×</option>
+        <option value="2">2×</option>
+      </select>
+    </label>
+
+    <div class="lang-switch" role="group" aria-label="Language">
+      <button type="button" class="lang-btn active" data-lang="auto" id="autoLangBtn">Auto</button>
+      <button type="button" class="lang-btn" data-lang="en">English</button>
+      <button type="button" class="lang-btn" data-lang="ur">اردو</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="composer">
+    <label class="sr-only" for="symptomInput" data-i18n="inputLabel">Describe your problem</label>
+    <textarea id="symptomInput" rows="3"
+      placeholder="For example: I have had fever and a sore throat for two days"></textarea>
+
+    <div class="composer-actions">
+      <button type="button" id="micBtn" class="btn btn-mic" aria-pressed="false">
+        <span class="mic-icon" aria-hidden="true">🎙</span>
+        <span data-i18n="speak" id="micLabel">Speak</span>
+      </button>
+      <button type="button" id="analyzeBtn" class="btn btn-primary" data-i18n="analyze">Get advice</button>
+      <button type="button" id="clearBtn" class="btn btn-ghost" data-i18n="clear">Clear</button>
+    </div>
+
+    <p id="micStatus" class="mic-status" role="status" aria-live="polite"></p>
+
+    <div class="examples">
+      <span class="examples-label" data-i18n="tryLabel">Try:</span>
+      <div id="examples" class="chips"></div>
+    </div>
+  </section>
+
+  <section id="results" class="results" aria-live="polite"></section>
+</main>
+
+<footer class="footer">
+  <p id="footerDisclaimer" data-i18n="footerDisclaimer">
+    This assistant gives general health information only. It is not a doctor and cannot diagnose you.
+  </p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
