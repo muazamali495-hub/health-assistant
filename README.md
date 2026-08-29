@@ -54,6 +54,30 @@ playing the first piece while the rest are still being synthesised, so speech be
 about a second instead of waiting for the whole answer. Every piece is cached on disk under
 `.cache/tts/`, so repeated advice replays instantly and works offline the second time.
 
+## Deploy it (live link)
+
+The Urdu voice needs the Node server as a proxy — browsers are blocked from calling the
+speech endpoint directly — so this has to run as a web service, not a static site.
+
+A `render.yaml` blueprint is included, so on [Render](https://render.com):
+
+1. Sign in with GitHub.
+2. **New → Blueprint**, and pick the `health-assistant` repository.
+3. **Apply**. Render reads `render.yaml`, runs `npm ci`, and starts `node server.js`.
+
+You get a public URL like `https://health-assistant-XXXX.onrender.com` in a few minutes.
+
+Notes on the free plan:
+
+- The service sleeps after ~15 minutes with no traffic, so the first request after a pause
+  takes roughly 50 seconds to wake up. Later requests are fast.
+- The disk is ephemeral, so the TTS cache resets whenever the service restarts. It refills
+  itself as people use the app.
+- To turn on AI mode, add `ANTHROPIC_API_KEY` under the service's Environment settings.
+
+Any host that runs a Node process works the same way — the only requirements are
+`npm ci`, `node server.js`, and the `PORT` environment variable, which the server honours.
+
 ### Optional AI mode
 
 ```bash
