@@ -59,24 +59,42 @@ about a second instead of waiting for the whole answer. Every piece is cached on
 The Urdu voice needs the Node server as a proxy — browsers are blocked from calling the
 speech endpoint directly — so this has to run as a web service, not a static site.
 
-A `render.yaml` blueprint is included, so on [Render](https://render.com):
+The app is split so it runs either way: `server.js` is a normal long-lived server (local,
+Docker, any VPS), and `api/index.js` hands the same Express app to a serverless platform.
 
-1. Sign in with GitHub.
-2. **New → Blueprint**, and pick the `health-assistant` repository.
-3. **Apply**. Render reads `render.yaml`, runs `npm ci`, and starts `node server.js`.
+### Vercel — free, no payment method required
 
-You get a public URL like `https://health-assistant-XXXX.onrender.com` in a few minutes.
+1. Go to [vercel.com](https://vercel.com) and sign in with GitHub.
+2. **Add New → Project**, import the `health-assistant` repository.
+3. Leave every setting at its default and click **Deploy**.
 
-Notes on the free plan:
+`vercel.json` already routes `/api/*` to the function and serves `public/` as static files.
+You get a URL like `https://health-assistant.vercel.app`.
 
-- The service sleeps after ~15 minutes with no traffic, so the first request after a pause
-  takes roughly 50 seconds to wake up. Later requests are fast.
-- The disk is ephemeral, so the TTS cache resets whenever the service restarts. It refills
-  itself as people use the app.
-- To turn on AI mode, add `ANTHROPIC_API_KEY` under the service's Environment settings.
+### Hugging Face Spaces — free, no payment method required
 
-Any host that runs a Node process works the same way — the only requirements are
-`npm ci`, `node server.js`, and the `PORT` environment variable, which the server honours.
+Create a Space, choose **Docker** as the SDK, and push this repo to it. The included
+`Dockerfile` listens on port 7860, which is what Spaces expects.
+
+### Anything that runs Docker
+
+`docker build -t health-assistant . && docker run -p 3100:7860 health-assistant`
+
+Works on Koyeb, Fly, a VPS, or your own machine.
+
+### Render
+
+`render.yaml` is included and works, but Render now asks for a card before it will start
+even a free instance.
+
+### Notes for any host
+
+- Set `ANTHROPIC_API_KEY` in the host's environment settings to enable AI mode. Without it
+  the app runs on its built-in guide, which is the default anyway.
+- The server honours `PORT`.
+- The TTS cache writes to `.cache/tts` normally and to the system temp directory on
+  serverless platforms, where the rest of the filesystem is read-only. Override it with
+  `TTS_CACHE_DIR`. A lost cache only costs one re-synthesis.
 
 ### Optional AI mode
 
@@ -114,7 +132,9 @@ single call, so the two languages cannot drift apart.
 | `lib/engine.js` | Language detection (script + Roman Urdu), matching, context extraction, and the medicine safety filter |
 | `lib/ai.js` | Optional Claude pass, restricted to the medicine whitelist |
 | `lib/tts.js` | Server-side speech for languages the device has no voice for, with chunking and a disk cache |
-| `server.js` | Express API and static hosting |
+| `app.js` | Express routes and static hosting |
+| `server.js` | Local and container entry point |
+| `api/index.js` | Serverless entry point (Vercel) |
 | `public/` | The bilingual UI, speech input and speech output |
 
 ## Safety rules built into the code
