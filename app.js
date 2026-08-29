@@ -17,6 +17,14 @@ const { EMERGENCY_CONTACTS } = require('./lib/redflags');
 
 const app = express();
 
+/**
+ * Routes live on a router so they can be mounted twice. Some serverless
+ * platforms rewrite `/api/analyze` to the function's own path before it
+ * reaches us, which would strip the prefix; mounting at both places means the
+ * app answers correctly either way.
+ */
+const api = express.Router();
+
 app.use(express.json({ limit: '32kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -135,7 +143,7 @@ function buildEmergencySpeech(messages, contacts, lang) {
  * Routes
  * ------------------------------------------------------------------ */
 
-app.get('/api/status', (req, res) => {
+api.get('/status', (req, res) => {
   res.json({
     ok: true,
     aiAvailable: ai.isAvailable(),
@@ -154,7 +162,7 @@ app.get('/api/status', (req, res) => {
  * pieces one at a time and starts playing the first while the rest are still
  * being made, instead of waiting for the whole answer.
  */
-app.post('/api/tts/plan', (req, res) => {
+api.post('/tts/plan', (req, res) => {
   const { text } = req.body || {};
   if (typeof text !== 'string' || !text.trim()) {
     return res.status(400).json({ error: 'Nothing to speak.' });
@@ -162,7 +170,7 @@ app.post('/api/tts/plan', (req, res) => {
   return res.json({ chunks: tts.chunkText(text) });
 });
 
-app.post('/api/tts', async (req, res) => {
+api.post('/tts', async (req, res) => {
   const { text, lang } = req.body || {};
 
   if (typeof text !== 'string' || !text.trim()) {
@@ -186,7 +194,7 @@ app.post('/api/tts', async (req, res) => {
   }
 });
 
-app.post('/api/analyze', async (req, res) => {
+api.post('/analyze', async (req, res) => {
   const { text, lang, useAI } = req.body || {};
 
   if (typeof text !== 'string' || !text.trim()) {
@@ -310,5 +318,8 @@ app.post('/api/analyze', async (req, res) => {
     disclaimer
   });
 });
+
+app.use('/api', api);
+app.use(api);
 
 module.exports = app;
