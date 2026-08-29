@@ -60,7 +60,8 @@ The Urdu voice needs the Node server as a proxy — browsers are blocked from ca
 speech endpoint directly — so this has to run as a web service, not a static site.
 
 The app is split so it runs either way: `server.js` is a normal long-lived server (local,
-Docker, any VPS), and `api/index.js` hands the same Express app to a serverless platform.
+Docker, any VPS), and `deploy/vercel-entry.js` hands the same Express app to a serverless
+platform.
 
 ### Vercel — free, no payment method required
 
@@ -134,7 +135,7 @@ single call, so the two languages cannot drift apart.
 | `lib/tts.js` | Server-side speech for languages the device has no voice for, with chunking and a disk cache |
 | `app.js` | Express routes and static hosting |
 | `server.js` | Local and container entry point |
-| `api/index.js` | Serverless entry point (Vercel) |
+| `deploy/vercel-entry.js` | Serverless entry point (Vercel) |
 | `public/` | The bilingual UI, speech input and speech output |
 
 ## Safety rules built into the code

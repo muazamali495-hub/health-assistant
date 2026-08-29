@@ -2,7 +2,7 @@
 
 /**
  * The Express app itself, with no server attached. `server.js` runs it as a
- * long-lived process locally and in Docker; `api/index.js` hands the same app
+ * long-lived process locally and in Docker; `deploy/vercel-entry.js` hands the same app
  * to a serverless platform. Keeping them apart means one set of routes.
  */
 
