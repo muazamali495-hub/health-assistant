@@ -25,6 +25,7 @@
       <input type="checkbox" id="aiToggle">
       <span data-i18n="aiMode">AI mode</span>
     </label>
+
     <label class="speed-control">
       <span data-i18n="voiceSpeed">Voice speed</span>
       <select id="speedSelect">
@@ -41,40 +42,45 @@
       <button type="button" class="lang-btn" data-lang="en">English</button>
       <button type="button" class="lang-btn" data-lang="ur">اردو</button>
     </div>
+
+    <button type="button" id="newChatBtn" class="btn btn-ghost btn-small" data-i18n="newChat">New chat</button>
   </div>
 </header>
 
-<main>
-  <section class="composer">
-    <label class="sr-only" for="symptomInput" data-i18n="inputLabel">Describe your problem</label>
-    <textarea id="symptomInput" rows="3"
-      placeholder="For example: I have had fever and a sore throat for two days"></textarea>
+<main class="chat-shell">
+  <div id="chat" class="chat" role="log" aria-live="polite">
 
-    <div class="composer-actions">
-      <button type="button" id="micBtn" class="btn btn-mic" aria-pressed="false">
-        <span class="mic-icon" aria-hidden="true">🎙</span>
-        <span data-i18n="speak" id="micLabel">Speak</span>
-      </button>
-      <button type="button" id="analyzeBtn" class="btn btn-primary" data-i18n="analyze">Get advice</button>
-      <button type="button" id="clearBtn" class="btn btn-ghost" data-i18n="clear">Clear</button>
-    </div>
-
-    <p id="micStatus" class="mic-status" role="status" aria-live="polite"></p>
-
-    <div class="examples">
+    <div id="welcome" class="welcome">
+      <p class="welcome-lead" data-i18n="welcomeLead">
+        Tell me what is troubling you — in English or Urdu, by typing or by voice.
+      </p>
+      <p class="welcome-note" data-i18n="welcomeNote">
+        You can keep talking after the first answer: add details and I will take the whole
+        conversation into account.
+      </p>
       <span class="examples-label" data-i18n="tryLabel">Try:</span>
       <div id="examples" class="chips"></div>
     </div>
+
+  </div>
+
+  <section class="composer">
+    <label class="sr-only" for="symptomInput" data-i18n="inputLabel">Describe your problem</label>
+    <div class="composer-row">
+      <textarea id="symptomInput" rows="1"
+        placeholder="For example: I have had fever and a sore throat for two days"></textarea>
+      <button type="button" id="micBtn" class="btn btn-mic" aria-pressed="false" title="Speak">
+        <span class="mic-icon" aria-hidden="true">🎙</span>
+        <span data-i18n="speak" id="micLabel">Speak</span>
+      </button>
+      <button type="button" id="analyzeBtn" class="btn btn-primary" data-i18n="send">Send</button>
+    </div>
+    <p id="micStatus" class="mic-status" role="status" aria-live="polite"></p>
+    <p class="composer-note" data-i18n="footerDisclaimer">
+      This assistant gives general health information only. It is not a doctor and cannot diagnose you.
+    </p>
   </section>
-
-  <section id="results" class="results" aria-live="polite"></section>
 </main>
-
-<footer class="footer">
-  <p id="footerDisclaimer" data-i18n="footerDisclaimer">
-    This assistant gives general health information only. It is not a doctor and cannot diagnose you.
-  </p>
-</footer>
 
 <script src="app.js"></script>
 </body>

@@ -195,7 +195,7 @@ api.post('/tts', async (req, res) => {
 });
 
 api.post('/analyze', async (req, res) => {
-  const { text, lang, useAI } = req.body || {};
+  const { text, lang, useAI, history } = req.body || {};
 
   if (typeof text !== 'string' || !text.trim()) {
     return res.status(400).json({ error: 'Please provide a description of the problem.' });
@@ -204,11 +204,22 @@ api.post('/analyze', async (req, res) => {
     return res.status(400).json({ error: 'Description is too long.' });
   }
 
+  // A conversation builds up one detail at a time: "I have fever", then
+  // "since three days". Assess the recent turns together so a follow-up adds
+  // to the picture instead of being read as a brand new complaint.
+  const priorTurns = (Array.isArray(history) ? history : [])
+    .filter((h) => typeof h === 'string' && h.trim())
+    .slice(-3)
+    .map((h) => h.trim().slice(0, 1000));
+
+  const combined = priorTurns.length ? `${priorTurns.join('. ')}. ${text}` : text;
+
+  // The language follows the latest message, so switching mid-conversation works.
   const primary = LANGS.includes(lang) ? lang : engine.detectLanguage(text);
 
   // The engine is a pure function, so running it once per language is cheap
   // and guarantees the two versions describe exactly the same assessment.
-  const results = { en: engine.analyze(text, 'en'), ur: engine.analyze(text, 'ur') };
+  const results = { en: engine.analyze(combined, 'en'), ur: engine.analyze(combined, 'ur') };
 
   const disclaimer = { en: results.en.disclaimer, ur: results.ur.disclaimer };
 
@@ -252,7 +263,7 @@ api.post('/analyze', async (req, res) => {
 
   if (useAI && ai.isAvailable()) {
     try {
-      const enriched = await ai.enrich(text, results);
+      const enriched = await ai.enrich(combined, results);
 
       if (enriched.emergency) {
         const warnings = [{

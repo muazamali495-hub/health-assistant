@@ -19,7 +19,11 @@ const I18N = {
     speak: 'Speak',
     listening: 'Listening…',
     analyze: 'Get advice',
-    clear: 'Clear',
+    send: 'Send',
+    newChat: 'New chat',
+    you: 'You',
+    welcomeLead: 'Tell me what is troubling you — in English or Urdu, by typing or by voice.',
+    welcomeNote: 'You can keep talking after the first answer: add details and I will take the whole conversation into account.',
     tryLabel: 'Try:',
     analyzing: 'Looking at your symptoms…',
     emergencyTitle: 'Get medical help now',
@@ -71,7 +75,11 @@ const I18N = {
     speak: 'بولیں',
     listening: 'سن رہا ہوں…',
     analyze: 'مشورہ لیں',
-    clear: 'صاف کریں',
+    send: 'بھیجیں',
+    newChat: 'نئی گفتگو',
+    you: 'آپ',
+    welcomeLead: 'بتائیے آپ کو کیا تکلیف ہے — انگریزی یا اردو میں، لکھ کر یا بول کر۔',
+    welcomeNote: 'پہلے جواب کے بعد بھی بات جاری رکھ سکتے ہیں: مزید تفصیل بتائیں، میں پوری گفتگو کو مدِنظر رکھوں گا۔',
     tryLabel: 'مثالیں:',
     analyzing: 'آپ کی علامات دیکھی جا رہی ہیں…',
     emergencyTitle: 'فوری طبی مدد حاصل کریں',
@@ -134,8 +142,9 @@ const el = {
   micLabel: document.getElementById('micLabel'),
   micStatus: document.getElementById('micStatus'),
   analyzeBtn: document.getElementById('analyzeBtn'),
-  clearBtn: document.getElementById('clearBtn'),
-  results: document.getElementById('results'),
+  newChatBtn: document.getElementById('newChatBtn'),
+  chat: document.getElementById('chat'),
+  welcome: document.getElementById('welcome'),
   examples: document.getElementById('examples'),
   aiToggle: document.getElementById('aiToggle'),
   aiToggleWrap: document.getElementById('aiToggleWrap'),
@@ -174,7 +183,6 @@ function paintInterface(next) {
 function setLanguageMode(mode) {
   langMode = mode;
   paintInterface(mode === 'ur' ? 'ur' : 'en');
-  el.results.innerHTML = '';
   el.micStatus.textContent = '';
   stopSpeaking();
 }
@@ -215,10 +223,8 @@ function renderExamples() {
     chip.className = 'chip';
     chip.textContent = text;
     chip.addEventListener('click', () => {
-      el.input.value = text;
       spokenInput = false;
-      el.input.focus();
-      analyze();
+      analyze(text);
     });
     el.examples.appendChild(chip);
   });
@@ -697,8 +703,7 @@ function buildAnswerBlock(data, lang) {
       chip.className = 'chip';
       chip.textContent = q;
       chip.addEventListener('click', () => {
-        el.input.value = el.input.value.trim() + ' — ' + q + ' ';
-        spokenInput = false;
+        el.input.placeholder = q;
         el.input.focus();
       });
       box.appendChild(chip);
@@ -759,29 +764,97 @@ function buildEmergencyBlock(data, lang) {
  * Result rendering
  * ------------------------------------------------------------------ */
 
-function renderResult(data, speakAloud) {
+/* ------------------------------------------------------------------ *
+ * The conversation
+ * ------------------------------------------------------------------ */
+
+/** Everything the person has said in this conversation, oldest first. */
+let history = [];
+
+const URDU_SCRIPT = /[؀-ۿ]/;
+
+function scrollToLatest() {
+  el.chat.scrollTop = el.chat.scrollHeight;
+}
+
+function addUserMessage(text, viaVoice) {
+  el.welcome.classList.add('hidden');
+
+  const msg = document.createElement('div');
+  msg.className = 'msg user';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble' + (URDU_SCRIPT.test(text) ? ' ur' : '');
+  bubble.textContent = text;
+
+  const meta = document.createElement('div');
+  meta.className = 'msg-meta';
+  meta.textContent = viaVoice ? `${t('you')} · 🎙` : t('you');
+
+  msg.append(bubble, meta);
+  el.chat.appendChild(msg);
+  scrollToLatest();
+}
+
+/** Placeholder shown while the answer is being worked out. */
+function addThinking() {
+  const msg = document.createElement('div');
+  msg.className = 'msg assistant';
+  msg.innerHTML = `<div class="thinking"><div class="spinner"></div>${t('analyzing')}</div>`;
+  el.chat.appendChild(msg);
+  scrollToLatest();
+  return msg;
+}
+
+function addAssistantMessage(node) {
+  const msg = document.createElement('div');
+  msg.className = 'msg assistant';
+  msg.appendChild(node);
+  el.chat.appendChild(msg);
+  scrollToLatest();
+  return msg;
+}
+
+function simpleAssistantMessage(text) {
+  const p = document.createElement('p');
+  p.textContent = text;
+  return card(I18N[uiLang].summaryTitle, p);
+}
+
+/**
+ * Turn one answer into a chat message. Replaces `slot` if given, so the
+ * "thinking" placeholder becomes the answer in place.
+ */
+function renderResult(data, speakAloud, slot) {
   // Auto mode: follow the language the person actually used.
   if (langMode === 'auto' && data.lang && data.lang !== uiLang) paintInterface(data.lang);
 
-  el.results.innerHTML = '';
-
-  if (data.empty) {
-    const p = document.createElement('p');
-    p.textContent = data.message[uiLang];
-    el.results.appendChild(card(I18N[uiLang].summaryTitle, p));
-    return;
-  }
-
-  // The language the user used comes first; the other follows underneath.
-  const order = data.lang === 'ur' ? ['ur', 'en'] : ['en', 'ur'];
-  const build = data.emergency ? buildEmergencyBlock : buildAnswerBlock;
+  const answer = document.createElement('div');
+  answer.className = 'answer';
 
   let primaryButton = null;
-  order.forEach((lang) => {
-    const { block, btn } = build(data, lang);
-    if (lang === data.lang) primaryButton = btn;
-    el.results.appendChild(block);
-  });
+
+  if (data.empty) {
+    answer.appendChild(simpleAssistantMessage(data.message[uiLang]));
+  } else {
+    // The language the person used comes first; the other follows underneath.
+    const order = data.lang === 'ur' ? ['ur', 'en'] : ['en', 'ur'];
+    const build = data.emergency ? buildEmergencyBlock : buildAnswerBlock;
+
+    order.forEach((lang) => {
+      const { block, btn } = build(data, lang);
+      if (lang === data.lang) primaryButton = btn;
+      answer.appendChild(block);
+    });
+  }
+
+  if (slot) {
+    slot.innerHTML = '';
+    slot.appendChild(answer);
+    scrollToLatest();
+  } else {
+    addAssistantMessage(answer);
+  }
 
   if (data.aiError) el.micStatus.textContent = t('aiFailed');
 
@@ -792,18 +865,30 @@ function renderResult(data, speakAloud) {
   }
 }
 
+function resetConversation() {
+  history = [];
+  el.chat.querySelectorAll('.msg').forEach((m) => m.remove());
+  el.welcome.classList.remove('hidden');
+  el.input.value = '';
+  el.micStatus.textContent = '';
+  spokenInput = false;
+  stopSpeaking();
+  autoGrow();
+  el.input.focus();
+}
+
 /* ------------------------------------------------------------------ *
- * Analyze
+ * Sending a message
  * ------------------------------------------------------------------ */
 
-async function analyze() {
-  const text = el.input.value.trim();
+async function analyze(preset) {
+  const text = (preset !== undefined ? preset : el.input.value).trim();
   if (!text) {
     el.micStatus.textContent = t('empty');
     return;
   }
 
-  const speakAloud = spokenInput;
+  const speakAloud = preset === undefined && spokenInput;
   spokenInput = false;
 
   if (recognizing) stopRecognition();
@@ -811,8 +896,15 @@ async function analyze() {
   el.micStatus.textContent = '';
   el.analyzeBtn.disabled = true;
 
-  el.results.innerHTML =
-    `<div class="card"><div class="loading"><div class="spinner"></div>${t('analyzing')}</div></div>`;
+  addUserMessage(text, speakAloud);
+  el.input.value = '';
+  autoGrow();
+
+  const slot = addThinking();
+  // Earlier turns go along too, so "since three days" is understood as part
+  // of the complaint rather than as a fresh one.
+  const priorTurns = history.slice(-3);
+  history.push(text);
 
   try {
     const res = await fetch('/api/analyze', {
@@ -820,36 +912,39 @@ async function analyze() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text,
+        history: priorTurns,
         lang: langMode === 'auto' ? undefined : langMode,
         useAI: el.aiToggle.checked
       })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'request failed');
-    renderResult(data, speakAloud);
+    renderResult(data, speakAloud, slot);
   } catch (err) {
-    el.results.innerHTML = '';
-    const p = document.createElement('p');
-    p.textContent = t('error');
-    el.results.appendChild(card(t('summaryTitle'), p));
+    slot.innerHTML = '';
+    slot.appendChild(simpleAssistantMessage(t('error')));
     console.error(err);
   } finally {
     el.analyzeBtn.disabled = false;
   }
 }
 
-el.analyzeBtn.addEventListener('click', analyze);
-el.clearBtn.addEventListener('click', () => {
-  el.input.value = '';
-  el.results.innerHTML = '';
-  el.micStatus.textContent = '';
-  spokenInput = false;
-  stopSpeaking();
-  el.input.focus();
-});
+/** Keep the composer one line tall until the text needs more. */
+function autoGrow() {
+  el.input.style.height = 'auto';
+  el.input.style.height = Math.min(el.input.scrollHeight, 140) + 'px';
+}
+
+el.analyzeBtn.addEventListener('click', () => analyze());
+el.newChatBtn.addEventListener('click', resetConversation);
+el.input.addEventListener('input', autoGrow);
 
 el.input.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') analyze();
+  // Enter sends; Shift+Enter makes a new line.
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    analyze();
+  }
 });
 
 /* ------------------------------------------------------------------ *
